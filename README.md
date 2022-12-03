@@ -1,1 +1,1 @@
-# detector-of-missing-owners-manual-attached-to-lawn-mower
+Detect missing owner's manual attached to the lawn mower during assembly process.
