@@ -1,7 +1,7 @@
 Detect missing owner's manual attached to the lawn mower during assembly process.
 
 # Detectors
-[detector_engine_gxv160_type_gcv170_type.pt](https://github.com/unitedtriangle/detector-of-missing-owners-manual-attached-to-lawn-mower/blob/main/detector_engine_gxv160_type_gcv170_type.pt) is used to detect a GXV160-typed engine or a GCV170-typed engine (trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
+[detector_engine_gxv160_type_gcv170_type.pt](https://github.com/unitedtriangle/detector-of-missing-owners-manual-attached-to-lawn-mower/blob/main/detector_engine_gxv160_type_gcv170_type.pt) is used to detect a gxv160-typed engine or a gcv170-typed engine (trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
 
 [detector_owners_manual_front_cover_back_cover.pt](https://github.com/unitedtriangle/detector-of-missing-owners-manual-attached-to-lawn-mower/blob/main/detector_owners_manual_front_cover_back_cover.pt) is used to detect a forward-facing or backward-facing owner's manual (trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
 
