@@ -1,13 +1,7 @@
-train: ../train/images
-val: ../valid/images
-test: ../test/images
+path:
+train: train/images
+val: valid/images
+test: test/images
 
 nc: 1
 names: ['gxv160']
-
-roboflow:
-  workspace: detector-of-missing-owners-manual-attached-to-lawn-mower
-  project: engine-gxv160-gcv170
-  version: 1
-  license: MIT
-  url: https://universe.roboflow.com/detector-of-missing-owners-manual-attached-to-lawn-mower/engine-gxv160-gcv170/dataset/1
