@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# .gitignore
+.gitignore
+
+# jupyter notebooks
+*.ipynb
+
+# desktop services store
+.DS_Store
