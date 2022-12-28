@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# jupyter notebooks
+*.ipynb
+
+# Desktop Services Store
+.DS_Store
