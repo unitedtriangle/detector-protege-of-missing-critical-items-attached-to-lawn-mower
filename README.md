@@ -1,4 +1,4 @@
-Detect missing critical items (owner's manual) attached to a lawn mower during assembly process.
+Detect missing critical items attached to a lawn mower during assembly process. Critical items include an owner's manual.
 
 # Detectors
 [engine_gxv160_gcv170.pt](https://github.com/unitedtriangle/detector-of-missing-owners-manual-attached-to-lawn-mower/blob/main/detectors/engine_gxv160_gcv170.pt) is used to detect the engine type of the lawn mower ("gxv160" or "gcv170"). The detector was trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
