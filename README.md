@@ -12,4 +12,4 @@ Detect missing critical items attached to a lawn mower during assembly process. 
 
 [YOLOv4 Object Detection on Webcam In Google Colab](https://github.com/theAIGuysCode/colab-webcam/blob/main/yolov4_webcam.ipynb) by [theAIGuysCode](https://github.com/theAIGuysCode).
 
-[Pixabay](https://pixabay.com/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=music&amp;utm_content=26528) sound effect samples including [LOUD Smoke Alarm unplug](https://pixabay.com/sound-effects/loud-smoke-alarm-unplug-26528/).
+[Pixabay](https://pixabay.com/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=music&amp;utm_content=26528) sound effect samples including [LOUD Smoke Alarm unplug](https://pixabay.com/sound-effects/loud-smoke-alarm-unplug-26528/), [Ding! idea](https://pixabay.com/sound-effects/ding-idea-40142/).
