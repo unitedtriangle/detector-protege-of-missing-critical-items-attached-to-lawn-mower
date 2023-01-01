@@ -128,8 +128,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# desktop services store
+.DS_Store
+
 # jupyter notebooks
 *.ipynb
 
-# desktop services store
-.DS_Store
+# directory of mower image records
+/records/
