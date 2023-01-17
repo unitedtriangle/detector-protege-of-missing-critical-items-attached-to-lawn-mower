@@ -2,11 +2,11 @@
 Protégé detects missing critical items attached to a lawn mower at the final stage of the assembly process. Critical items include an owner's manual.
 
 # Detectors
-[engine_gxv160_gcv170.pt](https://github.com/unitedtriangle/detector-of-missing-owners-manual-attached-to-lawn-mower/blob/main/detectors/engine_gxv160_gcv170.pt) is used to detect the engine type of the lawn mower ("gxv160" or "gcv170"). The detector was trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
+[engine.pt](https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/blob/main/detectors/engine.pt) is used to detect the engine type of the lawn mower ("gxv160" or "gcv170"). The detector was trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
 
 [critical_items.pt](https://github.com/unitedtriangle/detector-of-missing-owners-manual-attached-to-lawn-mower/blob/main/detectors/critical_items.pt) is used to detect critical items (owner's manual) attached to the lawn mower. The detector was trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
 
-[country_of_origin_label_21_inch_cutter_19_inch_cutter.pt](https://github.com/unitedtriangle/detector-of-missing-owners-manual-attached-to-lawn-mower/blob/main/detectors/country_of_origin_label_21_inch_cutter_19_inch_cutter.pt) is used to detect the country of origin label attached to the lawn mower. The detector was trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
+[origin_label.pt](https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/blob/main/detectors/origin_label.pt) is used to detect the country of origin label attached to the lawn mower. The detector was trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
 
 # References
 [Train Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data) and [PyTorch Hub](https://github.com/ultralytics/yolov5/issues/36) for training and running custom [YOLOv5](https://github.com/ultralytics/yolov5) detectors.
