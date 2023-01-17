@@ -1,5 +1,5 @@
 # About Protégé
-Protégé detects missing critical items attached to a lawn mower at the final stage of the assembly process. Critical items include an owner's manual.
+Protégé detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
 
 # Detectors
 [engine.pt](https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/blob/main/detectors/engine.pt) is used to detect the engine type of the lawn mower ("gxv160" or "gcv170"). The detector was trained from the [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) model).
