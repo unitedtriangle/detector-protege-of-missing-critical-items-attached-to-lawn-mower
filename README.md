@@ -2,7 +2,7 @@
 Protégé detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
 
 # Installation
-It is recommended to install the following Python packages in a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment).
+It is recommended to install the following packages in a Python>=3.7.0 [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment).
 
 ```bash
 pip install easyocr  # to read texts on labels
