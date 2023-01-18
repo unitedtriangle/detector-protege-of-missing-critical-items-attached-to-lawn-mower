@@ -3,6 +3,7 @@ Protégé detects missing critical items attached to a lawn mower at the final i
 
 # Installation
 It is recommended to install the following Python packages in a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment).
+
 ```bash
 pip install easyocr  # to read texts on labels
 pip uninstall opencv-python-headless  # to avoid conflict with opencv-python required for yolov5
