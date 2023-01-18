@@ -1,5 +1,5 @@
 # Protégé
-Detect missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
+Protégé detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
 
 # Installation
 ```bash
