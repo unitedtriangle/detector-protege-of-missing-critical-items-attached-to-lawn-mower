@@ -1,5 +1,12 @@
-# About Protégé
-Protégé detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
+# Protégé
+Detect missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
+
+# Installation
+```bash
+pip install easyocr  # to read texts on labels
+pip uninstall opencv-python-headless  # to avoid conflict with opencv-python required for yolov5
+pip install -r requirements.txt  # yolov5 and application-specific dependencies
+```
 
 # Detectors
 [engine.pt](https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/blob/main/detectors/engine.pt) trained from [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) is used to detect the engine of the lawn mower.
