@@ -2,6 +2,12 @@
 Protégé detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
 
 # Installation
+Clone the repository.
+```bash
+git clone https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower protege
+cd protege
+```
+
 It is recommended to install the following packages in a Python>=3.7.0 [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment).
 
 ```bash
