@@ -3,7 +3,7 @@
     <img src="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/logos/protege.jpg" width="180">
   </p>
   
-  protege detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
+  Protege detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
 </div>
 
 # Installation
