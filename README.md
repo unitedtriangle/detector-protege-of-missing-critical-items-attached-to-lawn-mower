@@ -1,6 +1,5 @@
+# <div align="center">Protégé</div>
 <div align="center">
-  # Protégé
-  
   <p>
     <img src="https://github.com/unitedtriangle/unitedtriangle/raw/main/logos/unitedtriangle.jpg" width="320">
   </p>
