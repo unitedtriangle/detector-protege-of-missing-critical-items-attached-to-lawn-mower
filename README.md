@@ -1,6 +1,6 @@
 <div align="center">
-# Protégé
   
+# Protégé
   <p>
     <img src="https://github.com/unitedtriangle/unitedtriangle/raw/main/logos/unitedtriangle.jpg" width="320">
   </p>
