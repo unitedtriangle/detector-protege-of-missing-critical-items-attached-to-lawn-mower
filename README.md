@@ -1,3 +1,10 @@
+<div align="center">
+  <p>
+    <img src="https://github.com/unitedtriangle/unitedtriangle/raw/main/logos/unitedtriangle.jpg">
+  </p>
+Protégé detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
+</div>
+
 # Protégé
 Protégé detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
 
