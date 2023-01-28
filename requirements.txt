@@ -50,4 +50,5 @@ seaborn>=0.11.0
 # ultralytics  # HUB https://hub.ultralytics.com
 
 # application-specific dependencies
-pygame  # to play sounds; may see message ApplePersistenceIgnoreState as result of package installation
+ray  # to run detections in separate processes
+pygame  # to play sounds; may see message ApplePersistenceIgnoreState as result of package installation but should not be problem
