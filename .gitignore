@@ -107,6 +107,7 @@ celerybeat.pid
 env/
 venv/
 ENV/
+environment/
 env.bak/
 venv.bak/
 
@@ -130,9 +131,3 @@ dmypy.json
 
 # desktop services store
 .DS_Store
-
-# jupyter notebooks
-*.ipynb
-
-# directory of mower image records
-/records/
