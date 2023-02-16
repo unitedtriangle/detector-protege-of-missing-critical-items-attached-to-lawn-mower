@@ -7,11 +7,12 @@
 </div>
 
 
-<object data="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/documentation/images/design-layout.pdf" type="application/pdf" width="750px" height="750px">
-    <embed src="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/documentation/images/design-layout.pdf" type="application/pdf">
-        <p>This browser does not support PDFs. Please download the PDF to view it: <a href="http://yoursite.com/the.pdf">Download PDF</a>.</p>
-    </embed>
-</object>
+# Design
+<div align="center">
+  <p>
+    <img src="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/documentation/images/logo.jpg" width="180">
+  </p>
+</div>
 
 
 # Installation
