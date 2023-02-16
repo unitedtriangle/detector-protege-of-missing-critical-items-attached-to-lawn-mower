@@ -11,6 +11,7 @@
 <div align="center">
   <p>
     <img src="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/documentation/images/design-layout.jpg" width="540">
+    
     design layout
   </p>
 </div>
