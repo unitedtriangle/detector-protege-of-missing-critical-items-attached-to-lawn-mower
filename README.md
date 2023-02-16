@@ -10,7 +10,7 @@
 # System layout
 <div align="center">
   <p>
-    <img src="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/documentation/images/system-layout.jpg" width="540">
+    <img src="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/documentation/images/system-layout.jpg" width="720">
   </p>
 </div>
 
