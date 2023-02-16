@@ -6,11 +6,9 @@
   Protege detects missing critical items attached to a lawn mower at the final inspection stage of the assembly process. Critical items include an owner's manual.
 </div>
 
-<div align="center">
-  <p>
-    <embed src="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/documentation/images/design-layout.pdf">
-  </p>
-</div>
+<object width="400" height="500" type="application/pdf" data="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/documentation/images/design-layout.pdf">
+    <p>Insert your error message here, if the PDF cannot be displayed.</p>
+</object>
 
 
 # Installation
