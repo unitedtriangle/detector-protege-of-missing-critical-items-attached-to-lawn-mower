@@ -22,7 +22,7 @@ git clone https://github.com/unitedtriangle/detector-protege-of-missing-critical
 cd protege
 ```
 
-It is recommended to install the following packages in a Python>=3.7.0 [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment).
+It is recommended to install the following packages in a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python>=3.7.0.
 
 ```bash
 pip install easyocr  # to read texts on labels
