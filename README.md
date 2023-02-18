@@ -25,7 +25,7 @@ cd protege
 It is recommended to install the following packages in a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later using [pip](https://pip.pypa.io/en/stable/).
 
 ```bash
-pip install easyocr  # to read texts on labels
+pip install easyocr  # to read mower id from image of origin label
 pip uninstall opencv-python-headless  # to avoid conflict with opencv-python required for yolov5
 pip install -r requirements.txt  # yolov5 and application-specific dependencies
 ```
