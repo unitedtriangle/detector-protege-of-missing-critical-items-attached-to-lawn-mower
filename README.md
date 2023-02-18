@@ -14,6 +14,8 @@
   </p>
 </div>
 
+Protege runs fastest on a computer with a graphics processing unit (GPU) from NVIDIA and a central processing unit (CPU) with multiple cores. The GPU if available speeds up the detection of critical items attached to the lawn mower and the reading of lawn mower identity number from the image of the country of origin label. The multi-core CPU supports the parallelism of the 2 processes.
+
 
 # Installation
 Clone the repository.
