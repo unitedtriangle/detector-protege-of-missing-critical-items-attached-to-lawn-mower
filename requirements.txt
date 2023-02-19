@@ -51,6 +51,6 @@ wheel>=0.38.0 # Snyk vulnerability fix
 # roboflow
 # ultralytics  # HUB https://hub.ultralytics.com
 
-# packages required for application specifically
+# packages required for protege specifically
 ray  # to run detections in separate processes
 pygame  # to play sounds; may see message ApplePersistenceIgnoreState as result of package installation but should not be problem
