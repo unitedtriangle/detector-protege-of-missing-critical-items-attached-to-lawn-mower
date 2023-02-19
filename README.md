@@ -18,31 +18,26 @@ Protege runs fastest on a computer with a graphics processing unit (GPU) from NV
 
 
 # Installation
-Clone the repository protege.
+Clone the repositories protege and yolov5.
 ```bash
 git clone https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower protege
 cd protege
+
+git clone https://github.com/ultralytics/yolov5 yolov5
 ```
 
-It is recommended to create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later in the local repository to install all packages required for the application.
+It is recommended to create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later in the directory protege to install all packages required for the application.
 ```bash
 python3 -m venv env
 source env/bin/activate
 ```
 
-Clone the repository yolov5 to the directory site-packages.
-```bash
-YOLOV5_DIRPATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('purelib'))")/yolov5
-git clone https://github.com/ultralytics/yolov5 $YOLOV5_DIRPATH
-touch $YOLOV5_DIRPATH/__init__.py  # to import from repository yolov5
-```
-
 Install the following packages using [pip](https://pip.pypa.io/en/stable/).
 ```bash
-pip install easyocr  # to read mower id from image of origin label
-pip uninstall opencv-python-headless  # to avoid conflict with opencv-python required for yolov5
-pip install -r $YOLOV5_DIRPATH/requirements.txt  # packages required for yolov5
+pip install -r yolov5/requirements.txt  # packages required for yolov5
 pip install -r requirements.txt  # packages required for protege specifically
+pip install easyocr  # package required for protege specifically to read mower id from image of origin label
+pip uninstall -y opencv-python-headless  # to avoid conflict with opencv-python required for yolov5
 ```
 
 
