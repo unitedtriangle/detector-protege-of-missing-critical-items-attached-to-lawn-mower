@@ -24,13 +24,19 @@ git clone https://github.com/unitedtriangle/detector-protege-of-missing-critical
 cd protege
 ```
 
-It is recommended to install the following packages in a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later using [pip](https://pip.pypa.io/en/stable/).
+It is recommended to create a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later in the local repository to install the packages required for the application.
+```bash
+python3 -m venv env
+source env/bin/activate
+```
 
+Install the following packages using [pip](https://pip.pypa.io/en/stable/).
 ```bash
 pip install easyocr  # to read mower id from image of origin label
 pip uninstall opencv-python-headless  # to avoid conflict with opencv-python required for yolov5
 pip install -r requirements.txt  # yolov5 and application-specific dependencies
 ```
+
 
 # Detectors
 [engine.pt](https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/blob/main/detectors/engine.pt) trained from [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) is used to detect the engine of the lawn mower.
@@ -38,6 +44,7 @@ pip install -r requirements.txt  # yolov5 and application-specific dependencies
 [items_critical.pt](https://github.com/unitedtriangle/detector-of-missing-owners-manual-attached-to-lawn-mower/blob/main/detectors/items_critical.pt) trained from [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) is used to detect critical items including an owner's manual attached to the lawn mower.
 
 [label_origin.pt](https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/blob/main/detectors/label_origin.pt) trained from [YOLOv5n](https://github.com/ultralytics/yolov5/releases/download/v6.2/yolov5n.pt) is used to detect the origin label attached to the lawn mower.
+
 
 # References
 [Ultralytics HUB](https://ultralytics.com/hub), [Train Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data) and [PyTorch Hub](https://github.com/ultralytics/yolov5/issues/36) for training and running custom [YOLOv5](https://github.com/ultralytics/yolov5) detectors.
