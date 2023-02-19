@@ -32,8 +32,7 @@ source env/bin/activate
 
 Clone the repository yolov5 to the directory site-packages.
 ```bash
-PYTHON_SITE_PACKAGES_DIRPATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('purelib'))")
-YOLOV5_DIRPATH=$PYTHON_SITE_PACKAGES_DIRPATH/yolov5
+YOLOV5_DIRPATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('purelib'))")/yolov5
 git clone https://github.com/ultralytics/yolov5 $YOLOV5_DIRPATH
 ```
 
