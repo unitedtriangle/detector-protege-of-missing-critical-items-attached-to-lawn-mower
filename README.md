@@ -24,7 +24,7 @@ git clone https://github.com/unitedtriangle/detector-protege-of-missing-critical
 cd protege
 ```
 
-It is recommended to create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later in the local repository to install all required packages.
+It is recommended to create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later in the local repository to install all packages required for the application.
 ```bash
 python3 -m venv env
 source env/bin/activate
