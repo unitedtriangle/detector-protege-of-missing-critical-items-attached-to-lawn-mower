@@ -34,7 +34,7 @@ Install the following packages using [pip](https://pip.pypa.io/en/stable/).
 ```bash
 pip install easyocr  # to read mower id from image of origin label
 pip uninstall opencv-python-headless  # to avoid conflict with opencv-python required for yolov5
-pip install -r requirements.txt  # yolov5 dependencies and dependencies specific to application
+pip install -r requirements.txt  # packages required for yolov5, packages required for application specifically
 ```
 
 
