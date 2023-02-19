@@ -23,7 +23,7 @@ Clone the repositories protege and yolov5.
 git clone https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower protege
 cd protege
 
-git clone https://github.com/ultralytics/yolov5
+git clone https://github.com/ultralytics/yolov5 yolov5
 ```
 
 It is recommended to create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later in the directory protege to install all packages required for the application.
