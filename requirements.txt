@@ -1,6 +1,6 @@
-# to install packages run pip install -r requirements.txt
+# to install required packages run pip install -r requirements.txt
 
-# yolov5 dependencies from https://raw.githubusercontent.com/ultralytics/yolov5/master/requirements.txt
+# packages required for yolov5 from https://raw.githubusercontent.com/ultralytics/yolov5/master/requirements.txt
 
 # Base ------------------------------------------------------------------------
 gitpython
@@ -40,6 +40,8 @@ seaborn>=0.11.0
 # openvino-dev  # OpenVINO export
 
 # Deploy ----------------------------------------------------------------------
+setuptools>=65.5.1 # Snyk vulnerability fix
+wheel>=0.38.0 # Snyk vulnerability fix
 # tritonclient[all]~=2.24.0
 
 # Extras ----------------------------------------------------------------------
@@ -49,6 +51,6 @@ seaborn>=0.11.0
 # roboflow
 # ultralytics  # HUB https://hub.ultralytics.com
 
-# dependencies specific to application
+# packages required for application specifically
 ray  # to run detections in separate processes
 pygame  # to play sounds; may see message ApplePersistenceIgnoreState as result of package installation but should not be problem
