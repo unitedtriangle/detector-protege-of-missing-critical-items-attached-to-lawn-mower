@@ -1,5 +1,5 @@
 # to install packages run pip install -r requirements.txt
 
-# packages required for protege specifically
+ultralytics-yolov5
 ray  # to run detections in separate processes
 pygame  # to play sounds; may see message ApplePersistenceIgnoreState as result of package installation but should not be problem
