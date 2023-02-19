@@ -18,13 +18,15 @@ Protege runs fastest on a computer with a graphics processing unit (GPU) from NV
 
 
 # Installation
-Clone the repository.
+Clone the repositories protege and yolov5.
 ```bash
 git clone https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower protege
 cd protege
+
+git clone https://github.com/ultralytics/yolov5
 ```
 
-It is recommended to create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later in the local repository to install the packages required for the application.
+It is recommended to create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) with Python 3.7.0 or later in the directory protege to install all packages required for the application.
 ```bash
 python3 -m venv env
 source env/bin/activate
@@ -32,9 +34,10 @@ source env/bin/activate
 
 Install the following packages using [pip](https://pip.pypa.io/en/stable/).
 ```bash
-pip install easyocr  # to read mower id from image of origin label
-pip uninstall -y opencv-python-headless  # remove opencv-python-headless installed by easyocr to avoid conflict with opencv-python required for yolov5 in requirements.txt
-pip install -r requirements.txt
+pip install -r requirements.txt  # packages required for protege specifically
+pip install easyocr  # package required for protege specifically to read mower id from image of origin label
+pip uninstall -y opencv-python-headless  # remove opencv-python-headless installed by easyocr to avoid conflict with opencv-python required for yolov5
+pip install -r yolov5/requirements.txt  # packages required for yolov5
 ```
 
 
