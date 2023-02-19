@@ -32,15 +32,16 @@ source env/bin/activate
 
 Clone the repository yolov5 to the directory site-packages.
 ```bash
-DIRPATH_SITE_PACKAGES=$(python3 -c "import sysconfig; print(sysconfig.get_path('purelib'))")
-git clone https://github.com/ultralytics/yolov5 $DIRPATH_SITE_PACKAGES/yolov5
+PYTHON_SITE_PACKAGES_DIRPATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('purelib'))")
+YOLOV5_DIRPATH=$PYTHON_SITE_PACKAGES_DIRPATH/yolov5
+git clone https://github.com/ultralytics/yolov5 $YOLOV5_DIRPATH
 ```
 
 Install the following packages using [pip](https://pip.pypa.io/en/stable/).
 ```bash
 pip install easyocr  # to read mower id from image of origin label
 pip uninstall opencv-python-headless  # to avoid conflict with opencv-python required for yolov5
-pip install -r $DIRPATH_YOLOV5/requirements.txt  # packages required for yolov5
+pip install -r $YOLOV5_DIRPATH/requirements.txt  # packages required for yolov5
 pip install -r requirements.txt  # packages required for protege specifically
 ```
 
