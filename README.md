@@ -34,10 +34,10 @@ source env/bin/activate
 
 Install the following packages using [pip](https://pip.pypa.io/en/stable/).
 ```bash
-pip install -r yolov5/requirements.txt  # packages required for yolov5
 pip install -r requirements.txt  # packages required for protege specifically
 pip install easyocr  # package required for protege specifically to read mower id from image of origin label
 pip uninstall -y opencv-python-headless  # to avoid conflict with opencv-python required for yolov5
+pip install -r yolov5/requirements.txt  # packages required for yolov5
 ```
 
 
