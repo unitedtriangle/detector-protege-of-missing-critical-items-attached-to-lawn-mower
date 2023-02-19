@@ -1,4 +1,4 @@
-# pip install -r requirements.txt
+# to install packages run pip install -r requirements.txt
 
 # yolov5 dependencies from https://raw.githubusercontent.com/ultralytics/yolov5/master/requirements.txt
 
@@ -49,6 +49,6 @@ seaborn>=0.11.0
 # roboflow
 # ultralytics  # HUB https://hub.ultralytics.com
 
-# application-specific dependencies
+# dependencies specific to application
 ray  # to run detections in separate processes
 pygame  # to play sounds; may see message ApplePersistenceIgnoreState as result of package installation but should not be problem
