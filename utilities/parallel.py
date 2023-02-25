@@ -37,3 +37,10 @@ class Share:
     """
     
     setattr(self, name, value)
+  
+  def exit(self):
+    """
+    terminate process of share gracefully
+    """
+
+    ray.actor.exit_actor()

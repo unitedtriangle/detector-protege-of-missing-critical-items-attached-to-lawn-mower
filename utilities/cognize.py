@@ -11,13 +11,10 @@ import ray
 import re
 from collections import deque
 import itertools
-import functools
-import requests
-from io import BytesIO
-from pathlib import Path
 from datetime import datetime
 import pytz
 from pygame import mixer
+from pathlib import Path
 import traceback
 
 from utilities.video import VideoCaptureBufferless
@@ -25,43 +22,56 @@ from utilities.parallel import Share
 
 
 class Protege:
-  def __init__(self, filepath_detector_engine=Path("detectors", "engine.pt"), filepath_detector_items=Path("detectors", "items_critical.pt"), url_detector_engine="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/detectors/engine.pt", url_detector_items="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/detectors/items_critical.pt", number_detections_max_engine=1, number_detections_max_items=1000, confidence_detector_engine=0.6, confidence_detector_items=0.6, is_on_gpu_mps_items=False, is_on_gpu_mps_label=False):
+  def __init__(self, dirpath_yolov5=Path("yolov5"), filepath_detector_engine=Path("detectors/engine.pt"), filepath_detector_items=Path("detectors/items_critical.pt"), filepath_detector_label=Path("detectors/label_origin.pt"), confidence_detector_engine=0.6, confidence_detector_items=0.6, confidence_detector_label=0.6, share_states_reader=None, is_on_gpu_mps_items=False, is_on_gpu_mps_label=False):
     """
     stream video 1 capturing critical items including owners manual
+
     detect missing critical items from frame of video 1
+
     save image capturing critical items temporarily for record
+
     run reader of mower id in process 2 to
       stream video 2 capturing origin label
       detect, extract image of origin label from frame of video 2
       read mower id from image of origin label, e.g. mower id MAYU-2023402
       save image capturing origin label for record
+    
     coordinate with reader of mower id to
       raise warning when origin label missing
       move image capturing critical items, image capturing origin label saved temporarily for record to directory of record for permanent storage
+    
     reliant on torch, ReaderIdMower thus faster on gpu device via api compute unified device architecture greatly or api metal performance shaders fairly
 
+    dirpath_yolov5: path to directory yolov5 or local repository yolov5
+    passed to arguments
+      repo_or_dir of torch.hub.load(...)
+      dirpath_yolov5 of ReaderIdMower.remote(...)
+
     filepath_detector_engine: path to model detector of engine
-    if not existent download from specified url
 
     filepath_detector_items: path to model detector of critical items
-    if not existent download from specified url
 
-    url_detector_engine: url to download model detector of engine from
+    filepath_detector_label: path to model detector of origin label
+    passed to argument filepath_detector_label of ReaderIdMower.remote(...)
 
-    url_detector_items: url to download model detector of critical items from
-
-    number_detections_max_engine: limit number of detections of engine per image to specified maximum
-    
-    number_detections_max_items: limit number of detections of critical items per image to specified maximum
-    
     confidence_detector_engine: confidence threshold of detector of engine
     
     confidence_detector_items: confidence threshold of detector of critical items
 
+    confidence_detector_label: confidence threshold of detector of origin label
+    passed to argument confidence_detector_label of ReaderIdMower.remote(...)
+    
+    share_states_reader: instance of share storing states of reader of mower id in other process
+    passed to argument share_states_reader of ReaderIdMower.remote(...)
+
     is_on_gpu_mps_items: put detector of engine, detector of critical items on gpu device from apple via api metal performance shaders if possible or not
     
     is_on_gpu_mps_label: put detector of origin label on gpu device from apple via api metal performance shaders if possible or not
+    passed to argument is_on_gpu_mps_label of ReaderIdMower.remote(...)
     """
+
+    if not isinstance(dirpath_yolov5, Path):
+      dirpath_yolov5 = Path(dirpath_yolov5)
 
     if not isinstance(filepath_detector_engine, Path):
       filepath_detector_engine = Path(filepath_detector_engine)
@@ -69,24 +79,15 @@ class Protege:
     if not isinstance(filepath_detector_items, Path):
       filepath_detector_items = Path(filepath_detector_items)
 
-    # download model detector of engine if not existent
-    if not filepath_detector_engine.is_file():
-      torch.hub.download_url_to_file(url=url_detector_engine, dst=filepath_detector_engine)
-    
     # load detector of engine
-    self.detector_engine = torch.hub.load(repo_or_dir=f"{torch.hub.get_dir()}/ultralytics_yolov5_master", source="local", model="custom", path=filepath_detector_engine)  # offline using local repository yolov5, local engine.pt; path to local repository yolov5 must be string
-    # self.detector_engine = torch.hub.load(repo_or_dir="ultralytics/yolov5", model="custom", path=url_detector_engine)  # online using remote repository yolov5, remote engine.pt
-    self.detector_engine.max_det = number_detections_max_engine  # limit number of detections of engine per image to specified maximum
+    self.detector_engine = torch.hub.load(repo_or_dir=dirpath_yolov5.as_posix(), source="local", model="custom", path=filepath_detector_engine)  # offline using directory yolov5, local engine.pt; path to directory yolov5 must be string
+    # self.detector_engine = torch.hub.load(repo_or_dir="ultralytics/yolov5", model="custom", path=filepath_detector_engine)  # online using remote repository yolov5, local engine.pt
+    self.detector_engine.max_det = 1  # maximum 1 detection of engine per image
     self.detector_engine.conf = confidence_detector_engine  # confidence threshold
     
-    # download model detector of critical items if not existent
-    if not filepath_detector_items.is_file():
-      torch.hub.download_url_to_file(url=url_detector_items, dst=filepath_detector_items)
-    
     # load detector of critical items
-    self.detector_items = torch.hub.load(repo_or_dir=f"{torch.hub.get_dir()}/ultralytics_yolov5_master", source="local", model="custom", path=filepath_detector_items)  # offline using local repository yolov5, local items_critical.pt; path to local repository yolov5 must be string
-    # self.detector_items = torch.hub.load(repo_or_dir="ultralytics/yolov5", model="custom", path=url_detector_items)  # online using remote repository yolov5, remote items_critical.pt
-    self.detector_items.max_det = number_detections_max_items  # limit number of detections of critical items per image to specified maximum
+    self.detector_items = torch.hub.load(repo_or_dir=dirpath_yolov5.as_posix(), source="local", model="custom", path=filepath_detector_items)  # offline using directory yolov5, local items_critical.pt; path to directory yolov5 must be string
+    # self.detector_items = torch.hub.load(repo_or_dir="ultralytics/yolov5", model="custom", path=filepath_detector_items)  # online using remote repository yolov5, local items_critical.pt
     self.detector_items.conf = confidence_detector_items  # confidence threshold
     
     # use gpu device if possible
@@ -105,45 +106,44 @@ class Protege:
       else:
         print("no speedup of detector of engine, detector of critical items due to no gpu device available")
     
-    self.reader_id_mower = ReaderIdMower.remote(is_on_gpu_mps_label=is_on_gpu_mps_label)  # load reader of mower id in process 2
-    self.share_states_reader = ray.get(self.reader_id_mower.get.remote("share_states_reader"))  # get instance of Share from other process storing states of reader of mower id including
+    self.reader_id_mower = ReaderIdMower.remote(dirpath_yolov5=dirpath_yolov5, filepath_detector_label=filepath_detector_label, confidence_detector_label=confidence_detector_label, share_states_reader=share_states_reader, is_on_gpu_mps_label=is_on_gpu_mps_label)  # load reader of mower id in process 2
+    self.share_states_reader = ray.get(self.reader_id_mower.get.remote("share_states_reader"))  # get instance of share storing states of reader of mower id in other process including
       # is_stopped=True,  # if true read_from_video(...) called to stop; if false read_from_video(...) allowed to run; set to false automatically upon call of read_from_video(...)
       # id_mower="",  # mower id read from image of origin label; if empty read_from_video(...) called to read mower id from image of origin label; if populated consider mower id read already
       # filepath_label="",  # path to image capturing origin label saved for record; if evaluated to false read_from_video(...) called to save image capturing origin label for record; if evaluated to true consider image capturing origin label saved already
       # for coordination
     
-    request_get = functools.lru_cache(requests.get)  # to keep recent results of requests.get(...) in memory
-    
     mixer.init()  # to play sounds; run mixer.quit() to terminate mixer if needed
     
-    # load sound go
-    try:
-      self.sound_go = mixer.Sound("sounds/go.wav")  # offline using local go.wav
-    except FileNotFoundError:
-      self.sound_go = mixer.Sound(BytesIO(request_get("https://github.com/unitedtriangle/detector-of-missing-critical-items-attached-to-lawn-mower/raw/main/sounds/go.wav").content))  # online using go.wav from remote repository protege
-    
-    # load sound warning
-    try:
-      self.sound_warning = mixer.Sound("sounds/warning.wav")  # offline using local warning.wav
-    except FileNotFoundError:
-      self.sound_warning = mixer.Sound(BytesIO(request_get("https://github.com/unitedtriangle/detector-of-missing-critical-items-attached-to-lawn-mower/raw/main/sounds/warning.wav").content))  # online using warning.wav from remote repository protege
+    # load sounds
+    self.sound_go = mixer.Sound("sounds/go.wav")  # sound go offline using local go.wav
+    # self.sound_go = mixer.Sound(io.BytesIO(requests.get("https://github.com/unitedtriangle/detector-of-missing-critical-items-attached-to-lawn-mower/raw/main/sounds/go.wav").content))  # sound go online using go.wav from remote repository protege
+    self.sound_warning = mixer.Sound("sounds/warning.wav")  # sound warning offline using local warning.wav
+    # self.sound_warning = mixer.Sound(io.BytesIO(requests.get("https://github.com/unitedtriangle/detector-of-missing-critical-items-attached-to-lawn-mower/raw/main/sounds/warning.wav").content))  # sound warning online using warning.wav from remote repository protege
   
-  def inspect(self, source_items, source_label, rotations=(15, -15), pattern_prefix=re.compile(r"[A-Z]{4}"), pattern_numeral=re.compile(r"\d{7,}"), area_different_min=3000, patience_items=18, patience_id_mower=9, dirpath_records_master=Path("records"), dirpath_temporary=Path("records/temporary"),
-              x_text_init=0, y_text_init=30, offset_y_text=30, fontface_text=cv2.FONT_HERSHEY_SIMPLEX, fontscale_text=1, thickness_text=2,
+  def inspect(self, source_items, source_label, rotations=(15, -15), pattern_prefix=re.compile(r"[A-Z]{4}"), pattern_numeral=re.compile(r"\d{7,}"), area_different_min=3000, patience_items=27, patience_id_mower=9, dirpath_records_master=Path("records"), dirpath_temporary=Path("records/temporary"),
+              x_text_init=0, y_text_init=30, offset_y_text=30, fontface_text=cv2.FONT_HERSHEY_SIMPLEX, fontscale_text=1, linetype_text=cv2.LINE_AA, thickness_text=3,
+              linetype_bbox_items=cv2.LINE_AA, thickness_bbox_items=3, color_bbox_items=(0, 0, 255),
+              linetype_bbox_label=cv2.LINE_AA, thickness_bbox_label=3, color_bbox_label=(0, 0, 255),
               name_timezone="Australia/Melbourne", format_datetime="%Y-%m-%d %H:%M:%S %Z", format_date="%Y-%m-%d",
               name_window_items="protege detecting missing critical items", name_window_label="protege reading mower id from image of origin label", scale_width_items=1, scale_height_items=1, scale_width_label=1, scale_height_label=1, x_window_items=0, y_window_items=0, x_window_label=0, y_window_label=0):
     """
     stream video 1 capturing critical items including owners manual
+
     detect missing critical items from frame of video 1
+
     save image capturing critical items temporarily for record
+
     run reader of mower id in process 2 to
       stream video 2 capturing origin label
       detect, extract image of origin label from frame of video 2
       read mower id from image of origin label, e.g. mower id MAYU-2023402
       save image capturing origin label for record
+    
     coordinate with reader of mower id to
       raise warning when origin label missing
       move image capturing critical items, image capturing origin label saved temporarily for record to directory of record for permanent storage
+    
     reliant on torch, ReaderIdMower thus faster on gpu device via api compute unified device architecture greatly or api metal performance shaders fairly
     
     source_items: source of video capturing critical items in form of address of ip camera or index of device camera or path to video file
@@ -177,7 +177,7 @@ class Protege:
     image capturing critical items, image capturing origin label moved to directory of record later for permanent storage
     passed to argument dirpath_label of reader_id_mower.read_from_video.remote(...)
     
-    parameters to render texts written on images:
+    parameters to render texts written on image:
       x_text_init, y_text_init: position to write first line of text on image in
       passed to arguments x_text_init, y_text_init of reader_id_mower.read_from_video.remote(...)
       
@@ -185,20 +185,45 @@ class Protege:
       passed to argument offset_y_text of reader_id_mower.read_from_video.remote(...)
       
       fontface_text: font or font type of text
-      passed to argument
+      passed to arguments
         fontFace of cv2.putText(...)
         fontface_text of reader_id_mower.read_from_video.remote(...)
       
       fontscale_text: factor to scale size of text from default size of given font
-      passed to argument
+      passed to arguments
         fontScale of cv2.putText(...)
         fontscale_text of reader_id_mower.read_from_video.remote(...)
       
-      thickness_text: thickness of strokes making up characters in text
-      passed to argument
+      linetype_text: type of lines making up characters of text
+      passed to arguments
+        lineType of cv2.putText(...)
+        linetype_text of reader_id_mower.read_from_video.remote(...)
+      
+      thickness_text: thickness of lines making up characters of text
+      passed to arguments
         thickness of cv2.putText(...)
         thickness_text of reader_id_mower.read_from_video.remote(...)
     
+    parameters to render bounding boxes drawn around critical items on image:
+      linetype_bbox_items: type of lines making up bounding boxes
+      passed to argument lineType of cv2.rectangle(...)
+      
+      thickness_bbox_items: thickness of lines making up bounding boxes
+      passed to argument thickness of cv2.rectangle(...)
+      
+      color_bbox_items: color in bgr of lines making up bounding boxes
+      passed to argument color of cv2.rectangle(...)
+
+    parameters to render bounding box drawn around origin label on image:
+      linetype_bbox_label: type of lines making up bounding box
+      passed to argument linetype_bbox_label of reader_id_mower.read_from_video.remote(...)
+
+      thickness_bbox_label: thickness of lines making up bounding box
+      passed to argument thickness_bbox_label of reader_id_mower.read_from_video.remote(...)
+      
+      color_bbox_label: color in bgr of lines making up bounding box
+      passed to argument color_bbox_label of reader_id_mower.read_from_video.remote(...)
+
     name_timezone: name of timezone to get datetime of image capture in
     passed to argument zone of pytz.timezone(...)
     
@@ -234,6 +259,9 @@ class Protege:
     if not isinstance(dirpath_records_master, Path):
       dirpath_records_master = Path(dirpath_records_master)
     
+    if not isinstance(dirpath_temporary, Path):
+      dirpath_temporary = Path(dirpath_temporary)
+
     capture_items = VideoCaptureBufferless(source=source_items).start()  # open source of video capturing critical items
     
     # states of detector of critical items
@@ -243,8 +271,8 @@ class Protege:
     patience_items_remain = patience_items  # remaining number of attempts at detecting critical items, retrieving path to image capturing origin label saved for record, 1 attempt per frame, before raising warning critical item(s) or origin label missing
     dirpath_record = ""  # path to directory of record to store image capturing critical items, image capturing origin label permanently
     filepath_items_temporary = ""  # path to image capturing critical items saved temporarily for record; image capturing critical items moved to directory of record later for permanent storage
-    filepath_label_temporary = ""  # path to image capturing origin label saved for record retrieved from instance of Share from other process storing states of reader of mower id; image capturing origin label moved to directory of record later for permanent storage
-    id_mower = ""  # mower id read from image of origin label retrieved from instance of Share from other process storing states of reader of mower id
+    filepath_label_temporary = ""  # path to image capturing origin label saved for record retrieved from instance of share storing states of reader of mower id in other process; image capturing origin label moved to directory of record later for permanent storage
+    id_mower = ""  # mower id read from image of origin label retrieved from instance of share storing states of reader of mower id in other process
     is_on_light_green = False  # light indicator green on or not
     is_on_light_red = False  # light indicator red on or not
     channel_go = None  # channel playing sound go; if not none sound go playing or played already
@@ -254,14 +282,15 @@ class Protege:
     
     dirpath_temporary.mkdir(parents=True, exist_ok=True)  # create directory to save image capturing critical items, image capturing origin label temporarily for record to if not existent
     
-    # states of reader of mower id
+    # reset states of reader of mower id
     self.share_states_reader.set.remote("is_stopped", True)  # call reader_id_mower.read_from_video.remote(...) to stop if running
     self.share_states_reader.set.remote("id_mower", "")  # call reader_id_mower.read_from_video.remote(...) to read mower id from image of origin label when run
     self.share_states_reader.set.remote("filepath_label", "")  # call reader_id_mower.read_from_video.remote(...) to save image capturing origin label for record when run
 
     self.reader_id_mower.read_from_video.remote(
       source_label=source_label, rotations=rotations, pattern_prefix=pattern_prefix, pattern_numeral=pattern_numeral, area_different_min=area_different_min, patience_id_mower=patience_id_mower, dirpath_label=dirpath_temporary,
-      x_text_init=x_text_init, y_text_init=y_text_init, offset_y_text=offset_y_text, fontface_text=fontface_text, fontscale_text=fontscale_text, thickness_text=thickness_text,
+      x_text_init=x_text_init, y_text_init=y_text_init, offset_y_text=offset_y_text, fontface_text=fontface_text, fontscale_text=fontscale_text, linetype_text=linetype_text, thickness_text=thickness_text,
+      linetype_bbox_label=linetype_bbox_label, thickness_bbox_label=thickness_bbox_label, color_bbox_label=color_bbox_label,
       format_datetime=format_datetime, name_timezone=name_timezone,
       name_window_label=name_window_label, scale_width_label=scale_width_label, scale_height_label=scale_height_label, x_window_label=x_window_label, y_window_label=y_window_label
     )  # stream video capturing origin label; detect, extract image of origin label from frame of video; read mower id from image of origin label, e.g. mower id MAYU-2023402; save image capturing origin label for record
@@ -315,29 +344,29 @@ class Protege:
             
             # write message ready for mower on image
             text = "ready for mower"
-            cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+            cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
             y_text += offset_y_text  # move to next line of text
           else:  # mower in frame
             if dirpath_record:  # directory of record existent storing image capturing critical items, image capturing origin label already; same mower in frame
               # write message found all required critical items already on image
               text = f"found all required critical items including {', '.join(items_checklist)} already"
-              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
               y_text += offset_y_text  # move to next line of text
 
               if id_mower:  # mower id readable fully or partly
                 # write message read mower id on image
                 text = f"read mower id as {id_mower} from source of video capturing origin label already"
-                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                 y_text += offset_y_text  # move to next line of text
               
               # write advice go ahead already on image
               text = "mower ok to go already"
-              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 255, 0))  # message in green
+              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 255, 0))  # text in green
               y_text += offset_y_text  # move to next line of text
             else:  # no image capturing critical items, image capturing origin label stored in directory of record yet; new mower in frame
               # write message new mower in frame on image
               text = "new mower in view"
-              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
               y_text += offset_y_text  # move to next line of text
               
               # attempt to detect critical items, retrieve path to image capturing origin label saved for record
@@ -348,23 +377,34 @@ class Protege:
               results_items = self.detector_items(image_items[:, :, ::-1])  # convert image from bgr to rgb to suit yolov5 detector
               detections_items = results_items.xyxy[0]  # detections of critical items for given single image
 
+              # draw bounding boxes around critical items on image
+              # update missing critical items
+              for det in detections_items:
+                x1_bbox_item, y1_bbox_item, x2_bbox_item, y2_bbox_item = int(det[0]), int(det[1]), int(det[2]), int(det[3])  # top left vertex, bottom right vertex of bounding box around critical item
+                
+                classname_item = results_items.names[det[5].item()]  # get classname of critical item from class
+
+                cv2.rectangle(image_items, pt1=(x1_bbox_item, y1_bbox_item), pt2=(x2_bbox_item, y2_bbox_item), lineType=linetype_bbox_items, thickness=thickness_bbox_items, color=color_bbox_items)  # draw bounding box around critical item on image
+                cv2.putText(image_items, text=f"{classname_item} {det[4]:.2f}", org=(x1_bbox_item, y1_bbox_item if y1_bbox_item >= offset_y_text else y1_bbox_item + offset_y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # write classname of critical item along with confidence next to bounding box around critical item on image; make sure classname of critical item inside image; text in white
+
+                items_missing.discard(classname_item)  # remove critical item from missing critical items
+              
               # check for missing critical items
-              items_missing.difference_update(results_items.names[det[5].item()] for det in detections_items)
               if not items_missing:  # found all required critical items
                 # write message found all required critical items on image
                 text = f"found all required critical items including {', '.join(items_checklist)}"
-                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                 y_text += offset_y_text  # move to next line of text
 
-              # get mower id read from image of origin label retrieved from instance of Share from other process storing states of reader of mower id
+              # get mower id read from image of origin label retrieved from instance of share storing states of reader of mower id in other process
               id_mower = ray.get(self.share_states_reader.get.remote("id_mower"))
               if id_mower:  # mower id readable fully or partly
                 # write message read mower id on image
                 text = f"read mower id as {id_mower} from source of video capturing origin label"
-                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                 y_text += offset_y_text  # move to next line of text
               
-              filepath_label_temporary = ray.get(self.share_states_reader.get.remote("filepath_label"))  # get path to image capturing origin label saved for record retrieved from instance of Share from other process storing states of reader of mower id
+              filepath_label_temporary = ray.get(self.share_states_reader.get.remote("filepath_label"))  # get path to image capturing origin label saved for record retrieved from instance of share storing states of reader of mower id in other process
               
               patience_items_remain -= 1  # deduct 1 attempt at detecting critical items, retrieving path to image capturing origin label saved for record
               
@@ -372,12 +412,12 @@ class Protege:
               if not items_missing and filepath_label_temporary:  # found, saved temporarily for record
                 # write datetime of image capture on image
                 text = datetime_capture.strftime(format_datetime)  # datetime of image capture in proper format
-                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                 y_text += offset_y_text  # move to next line of text
                 
                 # write advice go ahead on image
                 text = "mower ok to go"
-                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 255, 0))  # message in green
+                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 255, 0))  # text in green
                 y_text += offset_y_text  # move to next line of text
 
                 # save image capturing critical items temporarily for record
@@ -399,7 +439,7 @@ class Protege:
                 if patience_items_remain:  # attempt(s) at detecting critical items, retrieving path to image capturing origin label saved for record allowed still
                   # write message remaining number of attempts to check for all required critical items, image capturing origin label on image
                   text = f"{patience_items_remain} attempt{'' if patience_items_remain == 1 else 's'} remaining to check for all required critical items, image capturing origin label"
-                  cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+                  cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                   y_text += offset_y_text  # move to next line of text
                 else:  # no more attempts at detecting critical items, retrieving path to image capturing origin label saved for record allowed
                   is_on_light_red = True  # turn on light indicator red
@@ -409,13 +449,13 @@ class Protege:
                   if items_missing:  # missing critical items
                     # write message warning missing critical items on image
                     text = f"warning: rectify missing critical item{'' if len(items_missing) == 1 else 's'} {', '.join(items_missing)}"
-                    cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 0, 255))  # message in red
+                    cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 0, 255))  # text in red
                     y_text += offset_y_text  # move to next line of text
                   
                   if not filepath_label_temporary:  # not saved temporarily for record image capturing origin label
                     # write message warning missing origin label on image
                     text = "warning: rectify missing origin label"
-                    cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 0, 255))  # message in red
+                    cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 0, 255))  # text in red
                     y_text += offset_y_text  # move to next line of text
         else:  # not ok mower checked
           if not len(detections_engine):  # no mower detected
@@ -430,18 +470,18 @@ class Protege:
             if items_missing:  # missing critical items
               # write message warning missing critical items on image
               text = f"warning: put mower back in view to rectify missing critical item{'' if len(items_missing) == 1 else 's'} {', '.join(items_missing)}"
-              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 0, 255))  # message in red
+              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 0, 255))  # text in red
               y_text += offset_y_text  # move to next line of text
 
             if not filepath_label_temporary:  # not saved temporarily for record image capturing origin label
               # write message warning missing origin label on image
               text = "warning: put mower back in view to rectify missing origin label"
-              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 0, 255))  # message in red
+              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 0, 255))  # text in red
               y_text += offset_y_text  # move to next line of text
           else:  # mower in frame
             # write message mower in frame on image
             text = "mower in view"
-            cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+            cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
             y_text += offset_y_text  # move to next line of text
             
             if patience_items_remain:  # attempt(s) at detecting critical items, retrieving path to image capturing origin label saved for record allowed still
@@ -461,23 +501,34 @@ class Protege:
             results_items = self.detector_items(image_items[:, :, ::-1])  # convert image from bgr to rgb to suit yolov5 detector
             detections_items = results_items.xyxy[0]  # detections of critical items for given single image
 
+            # draw bounding boxes around critical items on image
+            # update missing critical items
+            for det in detections_items:
+              x1_bbox_item, y1_bbox_item, x2_bbox_item, y2_bbox_item = int(det[0]), int(det[1]), int(det[2]), int(det[3])  # top left vertex, bottom right vertex of bounding box around critical item
+              
+              classname_item = results_items.names[det[5].item()]  # get classname of critical item from class
+
+              cv2.rectangle(image_items, pt1=(x1_bbox_item, y1_bbox_item), pt2=(x2_bbox_item, y2_bbox_item), lineType=linetype_bbox_items, thickness=thickness_bbox_items, color=color_bbox_items)  # draw bounding box around critical item on image
+              cv2.putText(image_items, text=f"{classname_item} {det[4]:.2f}", org=(x1_bbox_item, y1_bbox_item if y1_bbox_item >= offset_y_text else y1_bbox_item + offset_y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # write classname of critical item along with confidence next to bounding box around critical item on image; make sure classname of critical item inside image; text in white
+
+              items_missing.discard(classname_item)  # remove critical item from missing critical items
+
             # check for missing critical items
-            items_missing.difference_update(results_items.names[det[5].item()] for det in detections_items)
             if not items_missing:  # found all required critical items
               # write message found all required critical items on image
               text = f"found all required critical items including {', '.join(items_checklist)}"
-              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
               y_text += offset_y_text  # move to next line of text
 
-            # get mower id read from image of origin label retrieved from instance of Share from other process storing states of reader of mower id
+            # get mower id read from image of origin label retrieved from instance of share storing states of reader of mower id in other process
             id_mower = ray.get(self.share_states_reader.get.remote("id_mower"))
             if id_mower:  # mower id readable fully or partly
               # write message read mower id on image
               text = f"read mower id as {id_mower} from source of video capturing origin label"
-              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
               y_text += offset_y_text  # move to next line of text
             
-            filepath_label_temporary = ray.get(self.share_states_reader.get.remote("filepath_label"))  # get path to image capturing origin label saved for record retrieved from instance of Share from other process storing states of reader of mower id
+            filepath_label_temporary = ray.get(self.share_states_reader.get.remote("filepath_label"))  # get path to image capturing origin label saved for record retrieved from instance of share storing states of reader of mower id in other process
             
             # deduct 1 attempt at detecting critical items, retrieving path to image capturing origin label saved for record but not allow patience_items_remain negative
             if patience_items_remain:  # attempt(s) at detecting critical items, retrieving path to image capturing origin label saved for record allowed still
@@ -489,12 +540,12 @@ class Protege:
 
               # write datetime of image capture on image
               text = datetime_capture.strftime(format_datetime)  # datetime of image capture in proper format
-              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
               y_text += offset_y_text  # move to next line of text
               
               # write advice go ahead on image
               text = "mower ok to go"
-              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 255, 0))  # message in green
+              cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 255, 0))  # text in green
               y_text += offset_y_text  # move to next line of text
 
               # save image capturing critical items temporarily for record
@@ -523,7 +574,7 @@ class Protege:
               if patience_items_remain:  # attempt(s) at detecting critical items, retrieving path to image capturing origin label saved for record allowed still
                 # write message remaining number of attempts to check for all required critical items, image capturing origin label on image
                 text = f"{patience_items_remain} attempt{'' if patience_items_remain == 1 else 's'} remaining to check for all required critical items, image capturing origin label"
-                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+                cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                 y_text += offset_y_text  # move to next line of text
               else:  # no more attempts at detecting critical items, retrieving path to image capturing origin label saved for record allowed
                 if not is_on_light_red:
@@ -536,13 +587,13 @@ class Protege:
                 if items_missing:  # missing critical items
                   # write message warning missing critical items on image
                   text = f"warning: rectify missing critical item{'' if len(items_missing) == 1 else 's'} {', '.join(items_missing)}"
-                  cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 0, 255))  # message in red
+                  cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 0, 255))  # text in red
                   y_text += offset_y_text  # move to next line of text
                 
                 if not filepath_label_temporary:  # not saved temporarily for record image capturing origin label
                   # write message warning missing origin label on image
                   text = "warning: rectify missing origin label"
-                  cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 0, 255))  # message in red
+                  cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 0, 255))  # text in red
                   y_text += offset_y_text  # move to next line of text
 
         # display statuses of light indicators
@@ -598,7 +649,9 @@ class Protege:
   def detect_engine(self, image_engine):
     """
     detect engine in image capturing engine
+
     reliant on torch thus faster on gpu device via api compute unified device architecture greatly or api metal performance shaders fairly
+    
     intended for testing purposes
     
     image_engine: source of image capturing engine in form of filepath or url or numpy.array or other forms suitable for yolov5 detector
@@ -608,18 +661,15 @@ class Protege:
 
     # detect engine
     results_engine = self.detector_engine(image_engine)
-    detections_engine = results_engine.xyxy[0]  # detections of engine for given single image
-
-    classnames_engine = results_engine.names  # name of engine detectable by detector of engine
-
-    image_engine_bbox = results_engine.render()[0]  # render bounding box around engine in rgb
     
-    return detections_engine, classnames_engine, image_engine_bbox
+    return results_engine
 
   def detect_items(self, image_items):
     """
     detect critical items in image capturing critical items
+
     reliant on torch thus faster on gpu device via api compute unified device architecture greatly or api metal performance shaders fairly
+    
     intended for testing purposes
     
     image_items: source of image capturing critical items in form of filepath or url or numpy.array or other forms suitable for yolov5 detector
@@ -629,35 +679,45 @@ class Protege:
 
     # detect critical items
     results_items = self.detector_items(image_items)
-    detections_items = results_items.xyxy[0]  # detections of critical items for given single image
-
-    classnames_items = results_items.names  # names of critical items detectable by detector of critical items
-
-    image_items_bbox = results_items.render()[0]  # render bounding boxes around critical items in rgb
     
-    return detections_items, classnames_items, image_items_bbox
+    return results_items
+  
+  def end_subprocesses(self):
+    """
+    terminate processes spawned from process of protege gracefully including
+      reader of mower id
+      instance of share storing states of reader of mower id
+    
+    reinitialize protege to restart processes
+    """
+
+    # terminate processes gracefully
+    self.reader_id_mower.exit.remote()  # reader of mower id in process 2
+    self.share_states_reader.exit.remote()  # instance of share storing states of reader of mower id in other process
 
 
 @ray.remote  # run instance of ReaderIdMower in separate process
 class ReaderIdMower:
-  def __init__(self, filepath_detector_label=Path("detectors", "label_origin.pt"), url_detector_label="https://github.com/unitedtriangle/detector-protege-of-missing-critical-items-attached-to-lawn-mower/raw/main/detectors/label_origin.pt", number_detections_max_label=1, confidence_detector_label=0.6, share_states_reader=None, is_on_gpu_mps_label=False):
+  def __init__(self, dirpath_yolov5=Path("yolov5"), filepath_detector_label=Path("detectors", "label_origin.pt"), confidence_detector_label=0.6, share_states_reader=None, is_on_gpu_mps_label=False):
     """
     stream video capturing origin label
+
     detect, extract image of origin label from image capturing origin label of video
+
     read mower id from image of origin label, e.g. mower id MAYU-2023402
+
     save image capturing origin label for record
+
     reliant on torch, easyocr thus faster on gpu device via api compute unified device architecture greatly or api metal performance shaders fairly
     
+    dirpath_yolov5: path to directory yolov5 or local repository yolov5
+    passed to argument repo_or_dir of torch.hub.load(...)
+
     filepath_detector_label: path to model detector of origin label
-    if not existent download from specified url
-
-    url_detector_label: url to download model detector of origin label from
-
-    number_detections_max_label: limit number of detections of origin label per image to specified maximum
 
     confidence_detector_label: confidence threshold of detector of origin label
     
-    share_states_reader: instance of Share from other process storing states of reader of mower id including
+    share_states_reader: instance of share storing states of reader of mower id in other process including
       is_stopped (bool): if true read_from_video(...) called to stop
       if false read_from_video(...) allowed to run uninterruptedly
       set to false automatically upon call of read_from_video(...)
@@ -674,6 +734,9 @@ class ReaderIdMower:
     is_on_gpu_mps_label: put detector of origin label on gpu device from apple via api metal performance shaders if possible or not
     """
     
+    if not isinstance(dirpath_yolov5, Path):
+      dirpath_yolov5 = Path(dirpath_yolov5)
+
     if not isinstance(filepath_detector_label, Path):
       filepath_detector_label = Path(filepath_detector_label)
 
@@ -687,14 +750,10 @@ class ReaderIdMower:
     else:
       self.share_states_reader = share_states_reader
     
-    # download model detector of origin label if not existent
-    if not filepath_detector_label.is_file():
-      torch.hub.download_url_to_file(url=url_detector_label, dst=filepath_detector_label)
-    
     # load detector of origin label
-    self.detector_label = torch.hub.load(repo_or_dir=f"{torch.hub.get_dir()}/ultralytics_yolov5_master", source="local", model="custom", path=filepath_detector_label)  # offline using local repository yolov5, local label_origin.pt; path to local repository yolov5 must be string
-    # self.detector_label = torch.hub.load(repo_or_dir="ultralytics/yolov5", model="custom", path=url_detector_label)  # online using remote repository yolov5, remote label_origin.pt
-    self.detector_label.max_det = number_detections_max_label  # limit number of detections of origin label per image to specified maximum
+    self.detector_label = torch.hub.load(repo_or_dir=dirpath_yolov5.as_posix(), source="local", model="custom", path=filepath_detector_label)  # offline using directory yolov5, local label_origin.pt; path to directory yolov5 must be string
+    # self.detector_label = torch.hub.load(repo_or_dir="ultralytics/yolov5", model="custom", path=filepath_detector_label)  # online using remote repository yolov5, local label_origin.pt
+    self.detector_label.max_det = 1  # maximum 1 detection of origin label per image
     self.detector_label.conf = confidence_detector_label  # confidence threshold
     
     self.reader_text = easyocr.Reader(["en"])  # load optical character recognition model to read mower id from image of origin label
@@ -714,14 +773,19 @@ class ReaderIdMower:
         print("no speedup of detector of origin label, optical character recognition model to read mower id due to no gpu device available")
   
   def read_from_video(self, source_label, rotations=(15, -15), pattern_prefix=re.compile(r"[A-Z]{4}"), pattern_numeral=re.compile(r"\d{7,}"), area_different_min=3000, patience_id_mower=9, dirpath_label=Path("records/label_origin"),
-                      x_text_init=0, y_text_init=30, offset_y_text=30, fontface_text=cv2.FONT_HERSHEY_SIMPLEX, fontscale_text=1, thickness_text=2,
+                      x_text_init=0, y_text_init=30, offset_y_text=30, fontface_text=cv2.FONT_HERSHEY_SIMPLEX, fontscale_text=1, linetype_text=cv2.LINE_AA, thickness_text=3,
+                      linetype_bbox_label=cv2.LINE_AA, thickness_bbox_label=3, color_bbox_label=(0, 0, 255),
                       format_datetime="%Y-%m-%d %H:%M:%S %Z", name_timezone="Australia/Melbourne",
                       name_window_label="protege reading mower id from image of origin label", scale_width_label=1, scale_height_label=1, x_window_label=0, y_window_label=0):
     """
     stream video capturing origin label
+
     detect, extract image of origin label from frame of video
+
     read mower id from image of origin label, e.g. mower id MAYU-2023402
+
     save image capturing origin label for record
+
     reliant on torch, easyocr thus faster on gpu device via api compute unified device architecture greatly or api metal performance shaders fairly
     
     source_label: source of video capturing origin label in form of address of ip camera or index of device camera or path to video file
@@ -743,7 +807,7 @@ class ReaderIdMower:
     
     dirpath_label: path to directory to save image capturing origin label for record to
     
-    parameters to render texts written on images:
+    parameters to render texts written on image:
       x_text_init, y_text_init: position to write first line of text on image in
       
       offset_y_text: vertical move in pixels to write next line of text on image
@@ -754,9 +818,22 @@ class ReaderIdMower:
       fontscale_text: factor to scale size of text from default size of given font
       passed to argument fontScale of cv2.putText(...)
       
-      thickness_text: thickness of strokes making up characters in text
+      linetype_text: type of lines making up characters of text
+      passed to argument lineType of cv2.putText(...)
+
+      thickness_text: thickness of strokes making up characters of text
       passed to argument thickness of cv2.putText(...)
     
+    parameters to render bounding box drawn around origin label on image:
+      linetype_bbox_label: type of lines making up bounding box
+      passed to argument lineType of cv2.rectangle(...)
+      
+      thickness_bbox_label: thickness of lines making up bounding box
+      passed to argument thickness of cv2.rectangle(...)
+      
+      color_bbox_label: color in bgr of lines making up bounding box
+      passed to argument color of cv2.rectangle(...)
+
     format_datetime: format of datetime of image capture
     passed to argument format of datetime_capture.strftime(...)
     
@@ -822,27 +899,36 @@ class ReaderIdMower:
           
           # write message no origin label on image
           text = "no origin label detected"
-          cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+          cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
           y_text += offset_y_text  # move to next line of text
         else:  # origin label in frame
+          # draw bounding box around origin label on image
+          for det in detections_label:
+            x1_bbox_label, y1_bbox_label, x2_bbox_label, y2_bbox_label = int(det[0]), int(det[1]), int(det[2]), int(det[3])  # top left vertex, bottom right vertex of bounding box around origin label
+
+            cv2.rectangle(image_label, pt1=(x1_bbox_label, y1_bbox_label), pt2=(x2_bbox_label, y2_bbox_label), lineType=linetype_bbox_label, thickness=thickness_bbox_label, color=color_bbox_label)  # draw bounding box around origin label on image
+            cv2.putText(image_label, text=f"{results_label.names[det[5].item()]} {det[4]:.2f}", org=(x1_bbox_label, y1_bbox_label if y1_bbox_label >= offset_y_text else y1_bbox_label + offset_y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # write classname of origin label along with confidence next to bounding box around origin label on image; make sure classname of origin label inside image; text in white
+
           if ray.get(self.share_states_reader.get.remote("filepath_label")):  # image capturing origin label saved already
             if ray.get(self.share_states_reader.get.remote("id_mower")):  # mower id readable fully or partly
               # write message read mower id already on image
               text = f"read mower id as {ray.get(self.share_states_reader.get.remote('id_mower'))} already"
-              cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+              cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
               y_text += offset_y_text  # move to next line of text
             
-            # write message image capturing origin label saved already on image
-            text = "image capturing origin label saved already"
-            cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 255, 0))  # message in green
+            # write message saved image capturing origin label already on image
+            text = "saved image capturing origin label already"
+            cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 255, 0))  # text in green
             y_text += offset_y_text  # move to next line of text
           else:  # no image capturing origin label saved yet
             if detect_motion(*frames_latest, area_different_min=area_different_min):  # motion in frame
               # write caution motion on image
               text = "caution: stop motion to read mower id"
-              cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 192, 255))  # message in amber
+              cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 192, 255))  # text in amber
               y_text += offset_y_text  # move to next line of text
             else:  # no motion detected
+              # attempt to read mower id from image of origin label
+
               image_cropped_label = results_label.crop(save=False)[0]["im"]  # extract image of origin label
 
               id_mower = self.read(image_cropped_label, rotations=rotations, pattern_prefix=pattern_prefix, pattern_numeral=pattern_numeral)  # read mower id from image of origin label
@@ -853,12 +939,12 @@ class ReaderIdMower:
               if id_mower:  # readable fully or partly
                 # write message read mower id on image
                 text = f"read mower id as {id_mower}"
-                cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(0, 255, 0))  # message in green
+                cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(0, 255, 0))  # text in green
                 y_text += offset_y_text  # move to next line of text
 
                 # write datetime of image capture on image
                 text = datetime_capture.strftime(format_datetime)  # datetime of image capture in proper format
-                cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+                cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                 y_text += offset_y_text  # move to next line of text
 
                 # save image capturing origin label for record
@@ -871,12 +957,12 @@ class ReaderIdMower:
                 if patience_id_mower_remain:  # attempt(s) at reading mower id from image of origin label allowed still
                   # write message remaining number of attempts to read mower id from image of origin label on image
                   text = f"{patience_id_mower_remain} attempt{'' if patience_id_mower_remain == 1 else 's'} remaining to read mower id from image of origin label"
-                  cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+                  cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                   y_text += offset_y_text  # move to next line of text
                 else:  # no more attempts at reading mower id from image of origin label allowed
                   # write datetime of image capture on image
                   text = datetime_capture.strftime(format_datetime)  # datetime of image capture in proper format
-                  cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, thickness=thickness_text, color=(255, 255, 255))  # message in white
+                  cv2.putText(image_label, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                   y_text += offset_y_text  # move to next line of text
 
                   # save image capturing origin label for record
@@ -927,6 +1013,7 @@ class ReaderIdMower:
   def read(self, image_cropped_label, rotations=(15, -15), pattern_prefix=re.compile(r"[A-Z]{4}"), pattern_numeral=re.compile(r"\d{7,}")):
     """
     read mower id from image of origin label, e.g. MAYU-2023402
+
     reliant on torch due to easyocr thus faster on gpu device via api compute unified device architecture greatly or api metal performance shaders fairly
     
     image_cropped_label (numpy.array): image of origin label
@@ -967,12 +1054,13 @@ class ReaderIdMower:
 
     return id_mower
   
-  def detect_extract_label(self, image_label):
+  def detect_label(self, image_label):
     """
-    detect, extract image of origin label from image capturing origin label
+    detect origin label from image capturing origin label
+
     reliant on torch thus faster on gpu device via api compute unified device architecture greatly or api metal performance shaders fairly
+    
     intended for testing purposes
-    note: not able to pass object of results of detector_label(...) in process 2 to other process calling detect_extract_label(...) due to location of yolov5 model to load object of results in process 2 not appropriate for other process
     
     image_label: source of image capturing origin label in form of filepath or url or numpy.array or other forms suitable for yolov5 detector
     passed to first argument of detector_label(...)
@@ -981,15 +1069,15 @@ class ReaderIdMower:
 
     # detect origin label
     results_label = self.detector_label(image_label)
-    detections_label = results_label.xyxy[0]  # detections of origin label for given single image
-
-    classnames_label = results_label.names  # name of origin label detectable by detector of origin label
-
-    image_label_bbox = results_label.render()[0]  # render bounding box around origin label in rgb for given single image
-
-    crops_label = results_label.crop(save=False)  # extract images of origin label
     
-    return detections_label, classnames_label, image_label_bbox, crops_label
+    return results_label
+  
+  def exit(self):
+    """
+    terminate process of reader of mower id gracefully
+    """
+
+    ray.actor.exit_actor()
 
 
 def detect_motion(image1=None, image2=None, area_different_min=1500):
@@ -1015,4 +1103,4 @@ def detect_motion(image1=None, image2=None, area_different_min=1500):
   
   contours, hierarchy = cv2.findContours(diff_images_threshold, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)  # contours of motion areas
   
-  return [contr for contr in contours if cv2.contourArea(contr) >= area_different_min]
+  return [contr for contr in contours if cv2.contourArea(contr) >= area_different_min]  # contours of motion areas >= minimum different area
