@@ -10,7 +10,7 @@ from scipy import ndimage
 import ray
 import re
 from collections import deque
-import itertools
+from itertools import chain
 from datetime import datetime
 import pytz
 from pygame import mixer
@@ -61,13 +61,15 @@ class Protege:
     confidence_detector_label: confidence threshold of detector of origin label
     passed to argument confidence_detector_label of ReaderIdMower.remote(...)
     
-    share_states_reader: instance of share storing states of reader of mower id in other process
+    share_states_reader: instance of Share storing states of reader of mower id in other process
     passed to argument share_states_reader of ReaderIdMower.remote(...)
 
     is_on_gpu_mps_items: put detector of engine, detector of critical items on gpu device from apple via api metal performance shaders if possible or not
+    caution: operations on images not implemented in api metal performance shaders of torch 1.13.1 stable
     
     is_on_gpu_mps_label: put detector of origin label on gpu device from apple via api metal performance shaders if possible or not
     passed to argument is_on_gpu_mps_label of ReaderIdMower.remote(...)
+    caution: operations on images not implemented in api metal performance shaders of torch 1.13.1 stable
     """
 
     if not isinstance(dirpath_yolov5, Path):
@@ -104,10 +106,10 @@ class Protege:
 
         print(f"speed up detector of engine, detector of critical items fairly using gpu device via api metal performance shaders")
       else:
-        print("no speedup of detector of engine, detector of critical items due to no gpu device available")
+        print("no speedup of detector of engine, detector of critical items due to no gpu device available or selected for use via argument is_on_gpu_mps_items passed to Protege(...)")
     
     self.reader_id_mower = ReaderIdMower.remote(dirpath_yolov5=dirpath_yolov5, filepath_detector_label=filepath_detector_label, confidence_detector_label=confidence_detector_label, share_states_reader=share_states_reader, is_on_gpu_mps_label=is_on_gpu_mps_label)  # load reader of mower id in process 2
-    self.share_states_reader = ray.get(self.reader_id_mower.get.remote("share_states_reader"))  # get instance of share storing states of reader of mower id in other process including
+    self.share_states_reader = ray.get(self.reader_id_mower.get.remote("share_states_reader"))  # get instance of Share storing states of reader of mower id in other process including
       # is_stopped=True,  # if true read_from_video(...) called to stop; if false read_from_video(...) allowed to run; set to false automatically upon call of read_from_video(...)
       # id_mower="",  # mower id read from image of origin label; if empty read_from_video(...) called to read mower id from image of origin label; if populated consider mower id read already
       # filepath_label="",  # path to image capturing origin label saved for record; if evaluated to false read_from_video(...) called to save image capturing origin label for record; if evaluated to true consider image capturing origin label saved already
@@ -271,8 +273,8 @@ class Protege:
     patience_items_remain = patience_items  # remaining number of attempts at detecting critical items, retrieving path to image capturing origin label saved for record, 1 attempt per frame, before raising warning critical item(s) or origin label missing
     dirpath_record = ""  # path to directory of record to store image capturing critical items, image capturing origin label permanently
     filepath_items_temporary = ""  # path to image capturing critical items saved temporarily for record; image capturing critical items moved to directory of record later for permanent storage
-    filepath_label_temporary = ""  # path to image capturing origin label saved for record retrieved from instance of share storing states of reader of mower id in other process; image capturing origin label moved to directory of record later for permanent storage
-    id_mower = ""  # mower id read from image of origin label retrieved from instance of share storing states of reader of mower id in other process
+    filepath_label_temporary = ""  # path to image capturing origin label saved for record retrieved from instance of Share storing states of reader of mower id in other process; image capturing origin label moved to directory of record later for permanent storage
+    id_mower = ""  # mower id read from image of origin label retrieved from instance of Share storing states of reader of mower id in other process
     is_on_light_green = False  # light indicator green on or not
     is_on_light_red = False  # light indicator red on or not
     channel_go = None  # channel playing sound go; if not none sound go playing or played already
@@ -396,7 +398,7 @@ class Protege:
                 cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                 y_text += offset_y_text  # move to next line of text
 
-              # get mower id read from image of origin label retrieved from instance of share storing states of reader of mower id in other process
+              # get mower id read from image of origin label retrieved from instance of Share storing states of reader of mower id in other process
               id_mower = ray.get(self.share_states_reader.get.remote("id_mower"))
               if id_mower:  # mower id readable fully or partly
                 # write message read mower id on image
@@ -404,7 +406,7 @@ class Protege:
                 cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
                 y_text += offset_y_text  # move to next line of text
               
-              filepath_label_temporary = ray.get(self.share_states_reader.get.remote("filepath_label"))  # get path to image capturing origin label saved for record retrieved from instance of share storing states of reader of mower id in other process
+              filepath_label_temporary = ray.get(self.share_states_reader.get.remote("filepath_label"))  # get path to image capturing origin label saved for record retrieved from instance of Share storing states of reader of mower id in other process
               
               patience_items_remain -= 1  # deduct 1 attempt at detecting critical items, retrieving path to image capturing origin label saved for record
               
@@ -520,7 +522,7 @@ class Protege:
               cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
               y_text += offset_y_text  # move to next line of text
 
-            # get mower id read from image of origin label retrieved from instance of share storing states of reader of mower id in other process
+            # get mower id read from image of origin label retrieved from instance of Share storing states of reader of mower id in other process
             id_mower = ray.get(self.share_states_reader.get.remote("id_mower"))
             if id_mower:  # mower id readable fully or partly
               # write message read mower id on image
@@ -528,7 +530,7 @@ class Protege:
               cv2.putText(image_items, text=text, org=(x_text, y_text), fontFace=fontface_text, fontScale=fontscale_text, lineType=linetype_text, thickness=thickness_text, color=(255, 255, 255))  # text in white
               y_text += offset_y_text  # move to next line of text
             
-            filepath_label_temporary = ray.get(self.share_states_reader.get.remote("filepath_label"))  # get path to image capturing origin label saved for record retrieved from instance of share storing states of reader of mower id in other process
+            filepath_label_temporary = ray.get(self.share_states_reader.get.remote("filepath_label"))  # get path to image capturing origin label saved for record retrieved from instance of Share storing states of reader of mower id in other process
             
             # deduct 1 attempt at detecting critical items, retrieving path to image capturing origin label saved for record but not allow patience_items_remain negative
             if patience_items_remain:  # attempt(s) at detecting critical items, retrieving path to image capturing origin label saved for record allowed still
@@ -686,19 +688,19 @@ class Protege:
     """
     terminate processes spawned from process of protege gracefully including
       reader of mower id
-      instance of share storing states of reader of mower id
+      instance of Share storing states of reader of mower id
     
     reinitialize protege to restart processes
     """
 
     # terminate processes gracefully
     self.reader_id_mower.exit.remote()  # reader of mower id in process 2
-    self.share_states_reader.exit.remote()  # instance of share storing states of reader of mower id in other process
+    self.share_states_reader.exit.remote()  # instance of Share storing states of reader of mower id in other process
 
 
 @ray.remote  # run instance of ReaderIdMower in separate process
 class ReaderIdMower:
-  def __init__(self, dirpath_yolov5=Path("yolov5"), filepath_detector_label=Path("detectors", "label_origin.pt"), confidence_detector_label=0.6, share_states_reader=None, is_on_gpu_mps_label=False):
+  def __init__(self, dirpath_yolov5=Path("yolov5"), filepath_detector_label=Path("detectors", "label_origin.pt"), confidence_detector_label=0.6, share_states_reader=None, is_on_gpu_mps_label=True):
     """
     stream video capturing origin label
 
@@ -717,7 +719,7 @@ class ReaderIdMower:
 
     confidence_detector_label: confidence threshold of detector of origin label
     
-    share_states_reader: instance of share storing states of reader of mower id in other process including
+    share_states_reader: instance of Share storing states of reader of mower id in other process including
       is_stopped (bool): if true read_from_video(...) called to stop
       if false read_from_video(...) allowed to run uninterruptedly
       set to false automatically upon call of read_from_video(...)
@@ -732,6 +734,7 @@ class ReaderIdMower:
     shareable with process calling read_from_video(...) for coordination
 
     is_on_gpu_mps_label: put detector of origin label on gpu device from apple via api metal performance shaders if possible or not
+    caution: operations on images not implemented in api metal performance shaders of torch 1.13.1 stable
     """
     
     if not isinstance(dirpath_yolov5, Path):
@@ -770,7 +773,7 @@ class ReaderIdMower:
 
         print(f"speed up detector of origin label fairly using gpu device via api metal performance shaders")
       else:
-        print("no speedup of detector of origin label, optical character recognition model to read mower id due to no gpu device available")
+        print("no speedup of detector of origin label, reader of mower id due to no gpu device available or selected for use via argument is_on_gpu_mps_label passed to ReaderIdMower(...)")
   
   def read_from_video(self, source_label, rotations=(15, -15), pattern_prefix=re.compile(r"[A-Z]{4}"), pattern_numeral=re.compile(r"\d{7,}"), area_different_min=3000, patience_id_mower=9, dirpath_label=Path("records/label_origin"),
                       x_text_init=0, y_text_init=30, offset_y_text=30, fontface_text=cv2.FONT_HERSHEY_SIMPLEX, fontscale_text=1, linetype_text=cv2.LINE_AA, thickness_text=3,
@@ -1028,7 +1031,7 @@ class ReaderIdMower:
     prefix = ""  # prefix of mower id consisting of letters, e.g. MAYU
     numeral = ""  # numeral of mower id consisting of digits, e.g. 2023402
 
-    images_label_checkable = itertools.chain([image_cropped_label], (ndimage.rotate(image_cropped_label, angle) for angle in rotations))  # checkable images of origin label including image of origin label as given and rotated by specified angles all evaluated lazily
+    images_label_checkable = chain([image_cropped_label], (ndimage.rotate(image_cropped_label, angle) for angle in rotations))  # checkable images of origin label including image of origin label as given and rotated by specified angles all evaluated lazily
 
     # find best reading of mower id from checkable images of origin label
     for image in images_label_checkable:
